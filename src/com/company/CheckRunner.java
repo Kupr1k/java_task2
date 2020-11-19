@@ -12,7 +12,7 @@ public class CheckRunner {
         }
 
        CheckCreator.initData();
-       CheckCreator.getCheck(ArgsParser.prodParser(args),CheckCreator.getSale(ArgsParser.cardParser(args)));
+       CheckCreator.getCheck(CheckCreator.prodParser(args),CheckCreator.getSale(CheckCreator.cardParser(args)));
     }
 }
 
