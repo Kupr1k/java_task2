@@ -1,8 +1,6 @@
 package com.company;
 
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.*;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
@@ -11,6 +9,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Scanner;
 
 public class CheckCreator {
 
@@ -18,26 +17,29 @@ public class CheckCreator {
     private final static List<Card> cards = new ArrayList<>();
 
     /* Parsing product args */
-    public static int[] prodParser(String[] args){
+    public static int[] prodParser(String[] args) throws FileNotFoundException {
 
-        int [] parsedProds = new int[args.length];
-
-        for(int i = 0; i < args.length; i++) {
-            if (!args[i].contains("card")) {
-                parsedProds[i] = Integer.parseInt(args[i].replaceAll("-", ""));
+        Scanner fileReader = new Scanner(new FileInputStream(args[0]));
+        String  [] split = fileReader.nextLine().split(" ");
+        int [] parsedProds = new int[split.length];
+        for (int i = 0; i < split.length; i++){
+            if (!split[i].contains("card")) {
+                parsedProds[i] = Integer.parseInt(split[i].replaceAll("-", ""));
             }
         }
         return parsedProds;
     }
 
     /* Parsing card args */
-    public static int cardParser(String[] args){
+    public static int cardParser(String[] args) throws FileNotFoundException {
 
+        Scanner fileReader = new Scanner(new FileInputStream(args[0]));
+        String  [] split = fileReader.nextLine().split(" ");
         int numCard = 0;
 
-        for (int i = 0; i < args.length; i++){
-            if (args[i].contains("card")) {
-                numCard = Integer.parseInt(args[i].replaceAll("card-", ""));
+        for (String s : split) {
+            if (s.contains("card")) {
+                numCard = Integer.parseInt(s.replaceAll("card-", ""));
             }
         }
         return numCard;
@@ -59,13 +61,17 @@ public class CheckCreator {
         File checkFile = new File("CheckFile.text");
         FileWriter writer = new FileWriter(checkFile);
 
-        BigDecimal total;
+        BigDecimal prodTotal;
         BigDecimal generalTotal = new BigDecimal(0);
-        BigDecimal percent = new BigDecimal(0.1);
+        BigDecimal taxableTotal;
+        BigDecimal discountToBigDecimal;
+        BigDecimal generalDiscount;
+
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss", Locale.US);
         LocalDate localDate = LocalDate.now();
         LocalTime localTime = LocalTime.now();
         String f = formatter.format(localTime);
+
 
         System.out.println("\t\t\t   CASH RECEIPT\t\t\t");
         writer.write("\t\t   CASH RECEIPT\t\t\t\n");
@@ -77,38 +83,41 @@ public class CheckCreator {
         writer.write("\t\tTel :123-456-7890\t\t\t\n");
         System.out.println();
         writer.write("\n");
-        System.out.println("CASHIER: 1520\t\t\t\t" + "DATE: " + localDate);
+        System.out.println("CASHIER: 1520\t\t\t\t\t\t" + "DATE: " + localDate);
         writer.write("CASHIER: 1520\t\t\t" + "DATE: " + localDate + "\n");
         System.out.println("\t\t\t\t\t\t\tTIME: " + f);
         writer.write("\t\t\t\tTIME: " + f + "\n");
-        System.out.println("_____________________________________________");
+        System.out.println("_________________________________________________________________________");
         writer.write("_________________________________________________\n");
         System.out.println("QTY\t\tDESCRIPTION\t\tPRICE\t\tTOTAL");
         writer.write("QTY\tDESCRIPTION\t\tPRICE\tTOTAL\n");
         for (int parsedProd : parsedProds) {
             for (Product products : products) {
                 if (products.getId() == parsedProd / 10) {
-                    BigDecimal mod = BigDecimal.valueOf(parsedProd % 10);
-                    total = products.getPrice().multiply(mod);
+                    BigDecimal prodQtyInOrder = BigDecimal.valueOf(parsedProd % 10);
+                    prodTotal = products.getPrice().multiply(prodQtyInOrder);
                     if (products.isOnSales() && parsedProd % 10 > 5) {
-                        total = total.subtract(total.multiply(percent));
+                        prodTotal = prodTotal.subtract(prodTotal.multiply(BigDecimal.valueOf(0.1))).setScale(2, RoundingMode.HALF_UP);
                     }
-                    System.out.println(parsedProd % 10 + "\t\t" + products.getName() + "\t\t\t" + products.getPrice() + "\t\t" + total.setScale(2, RoundingMode.HALF_DOWN));
-                    writer.write(parsedProd % 10 + "\t" + products.getName() + "\t\t\t" + products.getPrice() + "\t" + total.setScale(2, RoundingMode.HALF_DOWN) + "\n");
-                    generalTotal = generalTotal.add(total);
+                    System.out.println(parsedProd % 10 + "\t\t" + products.getName() + "\t\t\t" + products.getPrice() + "\t\t" + prodTotal);
+                    writer.write(parsedProd % 10 + "\t" + products.getName() + "\t\t\t" + products.getPrice() + "\t" + prodTotal + "\n");
+                    generalTotal = generalTotal.add(prodTotal).setScale(2, RoundingMode.HALF_UP);
                 }
             }
         }
-        System.out.println("_____________________________________________");
+        discountToBigDecimal = sale.divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+        taxableTotal = generalTotal.subtract(generalTotal.multiply(discountToBigDecimal).setScale(2, RoundingMode.HALF_UP));
+        generalDiscount = generalTotal.subtract(taxableTotal);
+        System.out.println("_________________________________________________________________________");
         writer.write("_________________________________________________\n");
-        System.out.println("_____________________________________________");
+        System.out.println("_________________________________________________________________________");
         writer.write("_________________________________________________\n");
-        System.out.println("TAXABLE TOT.\t\t\t\t\t\t" + (generalTotal.subtract(generalTotal.multiply(sale.divide(BigDecimal.valueOf(100))))).setScale(2,RoundingMode.HALF_DOWN));
-        writer.write("TAXABLE TOT.\t\t\t\t" + (generalTotal.subtract(generalTotal.multiply(sale.divide(BigDecimal.valueOf(100)))).setScale(2, RoundingMode.HALF_DOWN)) + "\n");
-        System.out.println("DISCOUNT:" + sale + "%\t\t\t\t\t\t" + (generalTotal.subtract(generalTotal.subtract(generalTotal.multiply(sale.divide(BigDecimal.valueOf(100)))))).setScale(2, RoundingMode.HALF_DOWN));
-        writer.write("DISCOUNT:" + sale + "%\t\t\t\t" + (generalTotal.subtract(generalTotal.subtract(generalTotal.multiply(sale.divide(BigDecimal.valueOf(100))))).setScale(2, RoundingMode.HALF_DOWN)) + "\n");
-        System.out.println("TOTAL: \t\t\t\t\t\t\t\t" + generalTotal.setScale(2, RoundingMode.HALF_DOWN));
-        writer.write("TOTAL: \t\t\t\t\t" + generalTotal.setScale(2, RoundingMode.HALF_DOWN) + "\n");
+        System.out.println("TAXABLE TOT.\t\t\t\t\t\t" + taxableTotal);
+        writer.write("TAXABLE TOT.\t\t\t\t" + (taxableTotal) + "\n");
+        System.out.println("DISCOUNT:" + sale + "%\t\t\t\t\t\t" + generalDiscount);
+        writer.write("DISCOUNT:" + sale + "%\t\t\t\t" + (generalDiscount) + "\n");
+        System.out.println("TOTAL: \t\t\t\t\t\t\t" + generalTotal);
+        writer.write("TOTAL: \t\t\t\t\t" + generalTotal + "\n");
         writer.flush();
         writer.close();
     }
