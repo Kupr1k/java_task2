@@ -17,12 +17,12 @@ public class CheckCreator {
     private final static List<Card> cards = new ArrayList<>();
 
     /* Parsing product args */
-    public static int[] prodParser(String[] args) throws FileNotFoundException {
-
+    public static int[] getProds(String[] args) throws FileNotFoundException {
         Scanner fileReader = new Scanner(new FileInputStream(args[0]));
-        String  [] split = fileReader.nextLine().split(" ");
+        String [] split = fileReader.nextLine().split(" ");
         int [] parsedProds = new int[split.length];
-        for (int i = 0; i < split.length; i++){
+
+        for (int i = 0; i < split.length; i++) {
             if (!split[i].contains("card")) {
                 parsedProds[i] = Integer.parseInt(split[i].replaceAll("-", ""));
             }
@@ -31,93 +31,82 @@ public class CheckCreator {
     }
 
     /* Parsing card args */
-    public static int cardParser(String[] args) throws FileNotFoundException {
-
+    public static BigDecimal getSale(String[] args) throws FileNotFoundException {
         Scanner fileReader = new Scanner(new FileInputStream(args[0]));
         String  [] split = fileReader.nextLine().split(" ");
         int numCard = 0;
+        BigDecimal sale = new BigDecimal(0);
 
         for (String s : split) {
             if (s.contains("card")) {
                 numCard = Integer.parseInt(s.replaceAll("card-", ""));
             }
         }
-        return numCard;
-    }
 
-    public static BigDecimal getSale(int numCard){
-        BigDecimal sale = new BigDecimal(0);
         for(Card cards: cards){
             if (numCard == cards.getCardNumber()) {
                 sale = cards.getDiscount();
             }
         }
+
         return sale;
     }
 
     /* Check formation */
-    public static void getCheck(int[] parsedProds, BigDecimal sale) throws IOException {
-
-        File checkFile = new File("CheckFile.text");
-        FileWriter writer = new FileWriter(checkFile);
-
+    public static String getCheck(int[] parsedProds, BigDecimal sale){
+        StringBuilder checkBuilder = new StringBuilder();
+        StringBuilder dataBuilder = new StringBuilder();
         BigDecimal prodTotal;
         BigDecimal generalTotal = new BigDecimal(0);
         BigDecimal taxableTotal;
         BigDecimal discountToBigDecimal;
         BigDecimal generalDiscount;
-
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss", Locale.US);
         LocalDate localDate = LocalDate.now();
         LocalTime localTime = LocalTime.now();
-        String f = formatter.format(localTime);
+        String formattedLocalTime = formatter.format(localTime);
 
-
-        System.out.println("\t\t\t   CASH RECEIPT\t\t\t");
-        writer.write("\t\t   CASH RECEIPT\t\t\t\n");
-        System.out.println("\t\t\t SUPERMARKET  123\t\t\t");
-        writer.write("\t\t SUPERMARKET  123\t\t\t\n");
-        System.out.println("\t\t 12, MILKYWAY Galaxy/ Earth\t\t\t");
-        writer.write("\t 12, MILKYWAY Galaxy/ Earth\t\t\t\n");
-        System.out.println("\t\t\tTel :123-456-7890\t\t\t");
-        writer.write("\t\tTel :123-456-7890\t\t\t\n");
-        System.out.println();
-        writer.write("\n");
-        System.out.println("CASHIER: 1520\t\t\t\t\t\t" + "DATE: " + localDate);
-        writer.write("CASHIER: 1520\t\t\t" + "DATE: " + localDate + "\n");
-        System.out.println("\t\t\t\t\t\t\tTIME: " + f);
-        writer.write("\t\t\t\tTIME: " + f + "\n");
-        System.out.println("_________________________________________________________________________");
-        writer.write("_________________________________________________\n");
-        System.out.println("QTY\t\tDESCRIPTION\t\tPRICE\t\tTOTAL");
-        writer.write("QTY\tDESCRIPTION\t\tPRICE\tTOTAL\n");
         for (int parsedProd : parsedProds) {
-            for (Product products : products) {
-                if (products.getId() == parsedProd / 10) {
+                for (Product products : products) {
+                if (products.getId() == parsedProd / 10){
                     BigDecimal prodQtyInOrder = BigDecimal.valueOf(parsedProd % 10);
                     prodTotal = products.getPrice().multiply(prodQtyInOrder);
                     if (products.isOnSales() && parsedProd % 10 > 5) {
                         prodTotal = prodTotal.subtract(prodTotal.multiply(BigDecimal.valueOf(0.1))).setScale(2, RoundingMode.HALF_UP);
                     }
-                    System.out.println(parsedProd % 10 + "\t\t" + products.getName() + "\t\t\t" + products.getPrice() + "\t\t" + prodTotal);
-                    writer.write(parsedProd % 10 + "\t" + products.getName() + "\t\t\t" + products.getPrice() + "\t" + prodTotal + "\n");
+                    dataBuilder.append("\n").append(parsedProd % 10).append("\t\t").append(products.getName()).append("\t\t" +
+                            "\t").append(products.getPrice()).append("\t\t").append(prodTotal);
                     generalTotal = generalTotal.add(prodTotal).setScale(2, RoundingMode.HALF_UP);
                 }
             }
         }
+
         discountToBigDecimal = sale.divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
         taxableTotal = generalTotal.subtract(generalTotal.multiply(discountToBigDecimal).setScale(2, RoundingMode.HALF_UP));
         generalDiscount = generalTotal.subtract(taxableTotal);
-        System.out.println("_________________________________________________________________________");
-        writer.write("_________________________________________________\n");
-        System.out.println("_________________________________________________________________________");
-        writer.write("_________________________________________________\n");
-        System.out.println("TAXABLE TOT.\t\t\t\t\t\t" + taxableTotal);
-        writer.write("TAXABLE TOT.\t\t\t\t" + (taxableTotal) + "\n");
-        System.out.println("DISCOUNT:" + sale + "%\t\t\t\t\t\t" + generalDiscount);
-        writer.write("DISCOUNT:" + sale + "%\t\t\t\t" + (generalDiscount) + "\n");
-        System.out.println("TOTAL: \t\t\t\t\t\t\t" + generalTotal);
-        writer.write("TOTAL: \t\t\t\t\t" + generalTotal + "\n");
+
+        checkBuilder.append("   CASH RECEIPT\t\t\t\n\t\t\t SUPERMARKET  123\t\t\t\n\t\t 12, MILKYWAY Galaxy/ Earth\t\t\t" +
+                "\n\t\t\tTel :123-456-7890\t\t\t\n\nCASHIER: 1520\t\t\t\t\t\t\t\tDATE: ");
+        checkBuilder.append(localDate);
+        checkBuilder.append("\n\t\t\t\t\t\t\t\t\t\t\tTIME: ");
+        checkBuilder.append(formattedLocalTime);
+        checkBuilder.append("\n_________________________________________________________________________" +
+                "\nQTY\t\tDESCRIPTION\t\tPRICE\t\tTOTAL");
+        checkBuilder.append(dataBuilder);
+        checkBuilder.append("\n_________________________________________________________________________" +
+                "\n_________________________________________________________________________" +
+                "\nTAXABLE TOT.\t\t\t\t\t\t");
+        checkBuilder.append(taxableTotal);
+        checkBuilder.append("\nDISCOUNT:").append(sale).append("%\t\t\t\t\t\t").append(generalDiscount);
+        checkBuilder.append("\nTOTAL: \t\t\t\t\t\t\t\t").append(generalTotal);
+
+        return checkBuilder.toString();
+    }
+
+    public static void checkInFile(String check) throws IOException {
+        File outputFile = new File("CheckFile.text");
+        FileWriter writer = new FileWriter(outputFile);
+        writer.write(check);
         writer.flush();
         writer.close();
     }

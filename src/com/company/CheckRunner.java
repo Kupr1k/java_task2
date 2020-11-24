@@ -12,7 +12,8 @@ public class CheckRunner {
         }
 
        CheckCreator.initData();
-       CheckCreator.getCheck(CheckCreator.prodParser(args),CheckCreator.getSale(CheckCreator.cardParser(args)));
+       System.out.println(CheckCreator.getCheck((CheckCreator.getProds(args)),CheckCreator.getSale(args)));
+       CheckCreator.checkInFile(CheckCreator.getCheck((CheckCreator.getProds(args)),CheckCreator.getSale(args)));
     }
 }
 
